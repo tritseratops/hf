@@ -27,10 +27,10 @@ def get_model(checkpoint):
     from torch.utils.data import DataLoader
 
     train_dataloader = DataLoader(
-        tokenized_datasets["train"], shuffle=True, batch_size=8, collate_fn=data_collator
+        tokenized_datasets["train"], shuffle=True, batch_size=6, collate_fn=data_collator
     )
     eval_dataloader = DataLoader(
-        tokenized_datasets["validation"], batch_size=8, collate_fn=data_collator
+        tokenized_datasets["validation"], batch_size=6, collate_fn=data_collator
     )
 
     for batch in train_dataloader:
@@ -101,16 +101,28 @@ def train_model(model, tokenizer, train_dataloader, eval_dataloader, batch):
         predictions = torch.argmax(logits, dim=-1)
         metric.add_batch(predictions=predictions, references=batch["labels"])
 
-    print(metric.compute())
-    return model
+    metrics = metric.compute()
+    print(metrics)
+    accuracy = metrics['accuracy']
+    return model, accuracy
 
-def save_model(model, tokenizer, chekpoint):
-    pass
+def save_model(model, tokenizer, accuracy):
+    from huggingface_hub import Repository
+    # model_namespace = "Mentatko/dummy-model"
+    model1_path = "D:\Large data\qa data\dummy model"
+    repo = Repository(model1_path)
+    repo.git_pull()
+    model.save_pretrained(model1_path)
+    tokenizer.save_pretrained(model1_path)
+    repo.git_add()
+    repo.git_commit("After Training, accuracy: " + str(accuracy))
+    repo.git_push()
+
 
 chekpoint = "Mentatko/dummy-model"
 
 model, tokenizer, train_dataloader, eval_dataloader, batch = get_model(chekpoint)
 
-model = train_model(model, tokenizer, train_dataloader, eval_dataloader, batch)
+model, accuracy = train_model(model, tokenizer, train_dataloader, eval_dataloader, batch)
 
-save_model(model, tokenizer, chekpoint)
+save_model(model, tokenizer, accuracy)
