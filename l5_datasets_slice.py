@@ -60,3 +60,43 @@ import html
 # drug_dataset = drug_dataset.map(lambda x: {"review": html.unescape(x["review"])})
 # batched
 new_drug_dataset = drug_dataset.map(lambda x: {"review": [html.unescape(o) for o in x["review"]]}, batched=True)
+
+
+from transformers import AutoTokenizer
+tokenizer = AutoTokenizer.from_pretrained("bert-base-cased")
+
+def tokenize_function(examples):
+    return tokenizer(examples["review"], truncation="longest_first")
+
+import time
+# start time
+st = time.time()
+#action
+tokenized_dataset = drug_dataset.map(tokenize_function, batched=True)
+# get the end time
+et = time.time()
+print("Elapsed time if batched=True: ", et-st, " seconds")
+
+# start time
+st = time.time()
+#action
+tokenized_dataset = drug_dataset.map(tokenize_function, batched=False)
+# get the end time
+et = time.time()
+print("Elapsed time if batched=False: ", et-st, " seconds")
+# loops if uncommented
+# # start time
+# st = time.time()
+# #action
+# tokenized_dataset = drug_dataset.map(tokenize_function, batched=True, num_proc=8)
+# # get the end time
+# et = time.time()
+# print("Elapsed time if batched=True: ", et-st, " seconds")
+#
+# # start time
+# st = time.time()
+# #action
+# tokenized_dataset = drug_dataset.map(tokenize_function, batched=False, num_proc=8)
+# # get the end time
+# et = time.time()
+# print("Elapsed time if batched=False: ", et-st, " seconds")
