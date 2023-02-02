@@ -57,4 +57,6 @@ drug_dataset = drug_dataset.filter(filter_small_reviews)
 print(drug_dataset.num_rows)
 
 import html
-drug_dataset = drug_dataset.map(lambda x: {"review": html.unescape(x["review"])})
+# drug_dataset = drug_dataset.map(lambda x: {"review": html.unescape(x["review"])})
+# batched
+new_drug_dataset = drug_dataset.map(lambda x: {"review": [html.unescape(o) for o in x["review"]]}, batched=True)
