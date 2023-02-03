@@ -68,22 +68,23 @@ tokenizer = AutoTokenizer.from_pretrained("bert-base-cased")
 def tokenize_function(examples):
     return tokenizer(examples["review"], truncation="longest_first")
 
-import time
-# start time
-st = time.time()
-#action
-tokenized_dataset = drug_dataset.map(tokenize_function, batched=True)
-# get the end time
-et = time.time()
-print("Elapsed time if batched=True: ", et-st, " seconds")
+# import time
+# # start time
+# st = time.time()
+# #action
+# tokenized_dataset = drug_dataset.map(tokenize_function, batched=True)
+# # get the end time
+# et = time.time()
+# print("Elapsed time if batched=True: ", et-st, " seconds")
+#
+# # start time
+# st = time.time()
+# #action
+# tokenized_dataset = drug_dataset.map(tokenize_function, batched=False)
+# # get the end time
+# et = time.time()
+# print("Elapsed time if batched=False: ", et-st, " seconds")
 
-# start time
-st = time.time()
-#action
-tokenized_dataset = drug_dataset.map(tokenize_function, batched=False)
-# get the end time
-et = time.time()
-print("Elapsed time if batched=False: ", et-st, " seconds")
 # loops if uncommented
 # # start time
 # st = time.time()
@@ -100,3 +101,25 @@ print("Elapsed time if batched=False: ", et-st, " seconds")
 # # get the end time
 # et = time.time()
 # print("Elapsed time if batched=False: ", et-st, " seconds")
+
+def tokenize_and_split(examples):
+    return tokenizer(
+        examples["review"],
+        truncation=True,
+        max_length=64,
+        return_overflowing_tokens=True
+    )
+
+result = tokenize_and_split(drug_dataset["train"][0])
+print([len(inp) for inp in result["input_ids"]])
+
+# tokenized_dataset = drug_dataset.map(tokenize_and_split, batched=True) # gives error because of old column names?
+# remove columns of th old dataset
+print(drug_dataset["train"].column_names)
+tokenized_dataset = drug_dataset.map(tokenize_and_split, batched=True, remove_columns=drug_dataset["train"].column_names)
+print(tokenized_dataset["train"].column_names)
+print(len(tokenized_dataset["train"]), len(drug_dataset["train"]))
+print(tokenized_dataset["train"][0])
+print(drug_dataset["train"][0])
+print(len(tokenized_dataset["train"][0]["input_ids"]))
+print(len(drug_dataset["train"][0]["review"].split()))
