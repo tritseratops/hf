@@ -101,16 +101,24 @@ def tokenize_function(examples):
 # # get the end time
 # et = time.time()
 # print("Elapsed time if batched=False: ", et-st, " seconds")
-
+#
 def tokenize_and_split(examples):
-    return tokenizer(
+    result =  tokenizer(
         examples["review"],
         truncation=True,
         max_length=64,
         return_overflowing_tokens=True
     )
+    # extract mapping between old and new indices
+    sample_map = result.pop("overflow_to_sample_mapping")
+    for key, values in examples.items():
+        result[key] = [values[i] for i in sample_map]
+    return result
 
+tokenized_dataset = drug_dataset.map(tokenize_and_split, batched=True)
+exit()
 result = tokenize_and_split(drug_dataset["train"][0])
+print("Result, column names: ", result.data.keys())
 print([len(inp) for inp in result["input_ids"]])
 
 # tokenized_dataset = drug_dataset.map(tokenize_and_split, batched=True) # gives error because of old column names?
@@ -123,3 +131,4 @@ print(tokenized_dataset["train"][0])
 print(drug_dataset["train"][0])
 print(len(tokenized_dataset["train"][0]["input_ids"]))
 print(len(drug_dataset["train"][0]["review"].split()))
+
