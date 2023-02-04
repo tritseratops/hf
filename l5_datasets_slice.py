@@ -116,10 +116,13 @@ def tokenize_and_split(examples):
     return result
 
 tokenized_dataset = drug_dataset.map(tokenize_and_split, batched=True)
+print(tokenized_dataset["train"].column_names)
+print(len(drug_dataset["train"]))
+print(len(tokenized_dataset["train"]))
 exit()
-result = tokenize_and_split(drug_dataset["train"][0])
-print("Result, column names: ", result.data.keys())
-print([len(inp) for inp in result["input_ids"]])
+# result = tokenize_and_split(drug_dataset["train"][0])
+# print("Result, column names: ", result.data.keys())
+# print([len(inp) for inp in result["input_ids"]])
 
 # tokenized_dataset = drug_dataset.map(tokenize_and_split, batched=True) # gives error because of old column names?
 # remove columns of th old dataset
