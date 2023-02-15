@@ -5,28 +5,28 @@ os.environ['TRANSFORMERS_CACHE'] = 'd:/Large data/qa data/transformers/cache/'
 
 import requests
 # url = "https://api.github.com/repos/huggingface/datasets/issues?page=1&per_page=1"
-page = 1
-per_page = 1
-base_url = "https://api.github.com/repos"
-owner="huggingface"
-repo="datasets"
-query = f"issues?page={page}&per_page={per_page}&state=all"
-from configparser import ConfigParser
-cfg=ConfigParser()
-cfg.read("config.ini")
-GITHUB_TOKEN = cfg['GITHUB']['GITHUB_TOKEN']
-print(GITHUB_TOKEN)
-headers = {"Authorization":f"token {GITHUB_TOKEN}"}
-issues = requests.get(f"{base_url}/{owner}/{repo}/{query}", headers=headers)
-print(issues)
-print(issues.status_code)
-print(issues.json())
+# page = 1
+# per_page = 1
+# base_url = "https://api.github.com/repos"
+# owner="huggingface"
+# repo="datasets"
+# query = f"issues?page={page}&per_page={per_page}&state=all"
+# from configparser import ConfigParser
+# cfg=ConfigParser()
+# cfg.read("config.ini")
+# GITHUB_TOKEN = cfg['GITHUB']['GITHUB_TOKEN']
+# print(GITHUB_TOKEN)
+# headers = {"Authorization":f"token {GITHUB_TOKEN}"}
+# issues = requests.get(f"{base_url}/{owner}/{repo}/{query}", headers=headers)
+# print(issues)
+# print(issues.status_code)
+# print(issues.json())
 
 # response = requests.get(url)
 # print(response)
 # print(response.status_code)
 # print(response.json())
-exit()
+# exit()
 
 
 import time
@@ -55,7 +55,7 @@ def fetch_issues(
         print("Page: ", page)
         # query with state=all to get both open and closed issues
         query = f"issues?page={page}&per_page={per_page}&state=all"
-        issues = requests.get(f"{base_url}/{owner}/{repo}/{query}", headers=headers)
+        issues = requests.get(f"{base_url}/{owner}/{repo}/{query}") #, headers=headers
         print(issues)
         batch.extend(issues.json())
 
@@ -70,8 +70,15 @@ def fetch_issues(
     df.to_json(f"{issues_path}/{repo}-issues.jsonl", orient="records", lines=True)
     print(f"Downloaded all the issues for {repo}! Dataset stored at {issues_path}/{repo}-issues.jsonl")
 
-fetch_issues()
+# fetch_issues()
 from datasets import load_dataset
-# data_files = "./datasets-issues.jsonl"
-# issues_dataset = load_dataset("json", data_files, split="train")
-# print(issues_dataset)
+data_files = "datasets-issues.jsonl"
+from configparser import ConfigParser
+cfg=ConfigParser()
+cfg.read("config.ini")
+PROJECT_DIR = cfg['LOCAL']['PROJECT_FOLDER']
+print(PROJECT_DIR)
+# file_dir = "D:\\vcs_projects\\hf\\"
+# file_dir = "D:\/vcs_projects\/hf\/"
+issues_dataset = load_dataset("json", PROJECT_DIR+data_files, split="train")
+print(issues_dataset)
