@@ -72,19 +72,22 @@ def fetch_issues(
 
 # fetch_issues()
 from datasets import load_dataset
-# data_files = "datasets-issues.jsonl"
+data_file_name = "datasets-issues.jsonl"
 # data_files = "datasets-issues-mod2.jsonl"
-data_files = "dataset_info23143w4231.json"
+# data_files_path = "D:\\Large data\\json\\drug-reviews-test.jsonl"
+# data_files = "dataset_info23143w4231.json"
 
 from configparser import ConfigParser
 cfg=ConfigParser()
 cfg.read("config.ini")
 PROJECT_DIR = cfg['LOCAL']['PROJECT_FOLDER']
 print(PROJECT_DIR)
-# file_dir = "D:\\vcs_projects\\hf\\"
-# file_dir = "D:\/vcs_projects\/hf\/"
-# issues_dataset = load_dataset("json", PROJECT_DIR+data_files, split="train")
-issues_dataset = load_dataset("json", data_files, split="train") #, encoding="unicode_escape" utf-8
+
+data_files = str(PROJECT_DIR)+str(data_file_name)
+print(data_files)
+issues_dataset = load_dataset("json", data_files=data_files, split="train")
+
+print(issues_dataset)
 # import pandas as pd
 # df = pd.read_json(data_files)
 # print(df)
