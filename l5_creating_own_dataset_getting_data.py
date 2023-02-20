@@ -73,7 +73,7 @@ def fetch_issues(
 # fetch_issues()
 from datasets import load_dataset
 data_file_name = "datasets-issues.jsonl"
-# data_files = "datasets-issues-mod2.jsonl"
+# data_file_name = "datasets-issues-mod.jsonl"
 # data_files_path = "D:\\Large data\\json\\drug-reviews-test.jsonl"
 # data_files = "dataset_info23143w4231.json"
 
@@ -83,11 +83,22 @@ cfg.read("config.ini")
 PROJECT_DIR = cfg['LOCAL']['PROJECT_FOLDER']
 print(PROJECT_DIR)
 
-data_files = str(PROJECT_DIR)+str(data_file_name)
+data_files = PROJECT_DIR+data_file_name
+# data_files = {"train": PROJECT_DIR+data_file_name}
 print(data_files)
-issues_dataset = load_dataset("json", data_files=data_files, split="train")
 
+
+import pandas as pd
+df = pd.read_json(data_files, lines=True)
+print(df)
+columns = df.columns
+print(df.columns)
+print(df.dtypes)
+head = df.head(1)
+print(head)
+print(head.iloc[0])
+for i in range(len(columns)-1):
+    print(columns[i], " : ", head.iloc(i))
+
+issues_dataset = load_dataset("json", data_files=data_files) # , split="train"
 print(issues_dataset)
-# import pandas as pd
-# df = pd.read_json(data_files)
-# print(df)
