@@ -98,7 +98,11 @@ head = df.head(1)
 print(head)
 print(head.iloc[0])
 for i in range(len(columns)-1):
-    print(columns[i], " : ", head.iloc(i))
+    print(columns[i], " : ", head[columns[i]])
 
+from datasets import Dataset
+tds = Dataset.from_pandas(df)
+print(tds)
+exit()
 issues_dataset = load_dataset("json", data_files=data_files) # , split="train"
 print(issues_dataset)
