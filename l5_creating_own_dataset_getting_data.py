@@ -103,6 +103,12 @@ for i in range(len(columns)-1):
 from datasets import Dataset
 tds = Dataset.from_pandas(df)
 print(tds)
-exit()
+dataset = tds.remove_columns([  'author_association', 'timeline_url', 'reactions', 'performed_via_github_app']) #  'comments', 'milestone','active_lock_reason', 'draft', 'pull_request', 'body',"closed_at", "created_at", "updated_at", 'repository_url', 'labels_url', 'comments_url', 'events_url', 'html_url', 'id', 'node_id', 'number', 'title', 'user', 'labels', 'state', 'locked', 'assignee', 'assignees',  'state_reason'
+print("After column remove:")
+print(dataset)
+data_file_name = "datasets-issues-wo-closed.jsonl"
+data_files = PROJECT_DIR+data_file_name
+dataset.to_json(f"{data_files}", orient="records", lines=True)
+# exit()
 issues_dataset = load_dataset("json", data_files=data_files) # , split="train"
 print(issues_dataset)
