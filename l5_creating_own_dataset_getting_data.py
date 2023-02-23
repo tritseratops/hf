@@ -72,7 +72,7 @@ def fetch_issues(
 
 # fetch_issues()
 from datasets import load_dataset
-data_file_name = "datasets-issues.jsonl"
+modified_data_file_name = "datasets-issues.jsonl"
 # data_file_name = "datasets-issues-mod.jsonl"
 # data_files_path = "D:\\Large data\\json\\drug-reviews-test.jsonl"
 # data_files = "dataset_info23143w4231.json"
@@ -83,32 +83,50 @@ cfg.read("config.ini")
 PROJECT_DIR = cfg['LOCAL']['PROJECT_FOLDER']
 print(PROJECT_DIR)
 
-data_files = PROJECT_DIR+data_file_name
-# data_files = {"train": PROJECT_DIR+data_file_name}
-print(data_files)
 
 
-import pandas as pd
-df = pd.read_json(data_files, lines=True)
-print(df)
-columns = df.columns
-print(df.columns)
-print(df.dtypes)
-head = df.head(1)
-print(head)
-print(head.iloc[0])
-for i in range(len(columns)-1):
-    print(columns[i], " : ", head[columns[i]])
+"""
+load file via panda
+removes columns that cause bugs 'author_association', 'timeline_url', 'reactions', 'performed_via_github_app'
+saves as dataset arrow file
+"""
+def remove_bugged_columns(project_dir, old_datafile_name, new_data_file_name, ):
+    # data_file_name = "datasets-issues.jsonl"
+    data_files = project_dir + old_datafile_name
+    # data_files = {"train": PROJECT_DIR+data_file_name}
+    print(data_files)
+    import pandas as pd
+    df = pd.read_json(data_files, lines=True)
+    print(df)
+    columns = df.columns
+    print(df.columns)
+    print(df.dtypes)
+    head = df.head(1)
+    print(head)
+    print(head.iloc[0])
+    for i in range(len(columns)-1):
+        print(columns[i], " : ", head[columns[i]])
 
-from datasets import Dataset
-tds = Dataset.from_pandas(df)
-print(tds)
-dataset = tds.remove_columns([  'author_association', 'timeline_url', 'reactions', 'performed_via_github_app']) #  'comments', 'milestone','active_lock_reason', 'draft', 'pull_request', 'body',"closed_at", "created_at", "updated_at", 'repository_url', 'labels_url', 'comments_url', 'events_url', 'html_url', 'id', 'node_id', 'number', 'title', 'user', 'labels', 'state', 'locked', 'assignee', 'assignees',  'state_reason'
-print("After column remove:")
-print(dataset)
-data_file_name = "datasets-issues-wo-closed.jsonl"
-data_files = PROJECT_DIR+data_file_name
-dataset.to_json(f"{data_files}", orient="records", lines=True)
+    from datasets import Dataset
+    tds = Dataset.from_pandas(df)
+    print(tds)
+    dataset = tds.remove_columns([  'author_association', 'timeline_url', 'reactions', 'performed_via_github_app']) #  'comments', 'milestone','active_lock_reason', 'draft', 'pull_request', 'body',"closed_at", "created_at", "updated_at", 'repository_url', 'labels_url', 'comments_url', 'events_url', 'html_url', 'id', 'node_id', 'number', 'title', 'user', 'labels', 'state', 'locked', 'assignee', 'assignees',  'state_reason'
+    print("After column remove:")
+    print(dataset)
+    # data_file_name = "datasets-issues-wo-closed.jsonl"
+    data_files = project_dir+new_data_file_name
+    dataset.to_json(f"{data_files}", orient="records", lines=True)
 # exit()
+original_df_name = "datasets-issues.jsonl"
+modified_data_file_name = "datasets-issues-wo-closed.jsonl"
+data_files = PROJECT_DIR + modified_data_file_name
+remove_bugged_columns(PROJECT_DIR, original_df_name, modified_data_file_name)
 issues_dataset = load_dataset("json", data_files=data_files) # , split="train"
 print(issues_dataset)
+
+sample = issues_dataset.shuffle(seed=666).select(range(3))
+
+# print out the URL and pull request entries
+for url, pr in zip(sample["html_url"], sample["pull_request"]):
+    print(f">> URL: {url}")
+    print(f">>Pull request: {pr}\n")
