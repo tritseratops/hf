@@ -121,12 +121,20 @@ original_df_name = "datasets-issues.jsonl"
 modified_data_file_name = "datasets-issues-wo-closed.jsonl"
 data_files = PROJECT_DIR + modified_data_file_name
 remove_bugged_columns(PROJECT_DIR, original_df_name, modified_data_file_name)
-issues_dataset = load_dataset("json", data_files=data_files) # , split="train"
+issues_dataset = load_dataset("json", data_files=data_files, split="train") # , split="train"
 print(issues_dataset)
 
 sample = issues_dataset.shuffle(seed=666).select(range(3))
 
 # print out the URL and pull request entries
-for url, pr in zip(sample["html_url"], sample["pull_request"]):
-    print(f">> URL: {url}")
-    print(f">>Pull request: {pr}\n")
+# for url, pr in zip(sample["html_url"], sample["pull_request"]):
+#     print(f">> URL: {url}")
+#     print(f">>Pull request: {pr}\n")
+
+issues_dataset = issues_dataset.map(
+    lambda x: {"is_pull_request": False if x["pull_request"] is None else True}
+)
+
+print(issues_dataset)
+
+
