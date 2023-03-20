@@ -121,7 +121,7 @@ original_df_name = "datasets-issues.jsonl"
 modified_data_file_name = "datasets-issues-wo-closed.jsonl"
 data_files = PROJECT_DIR + modified_data_file_name
 remove_bugged_columns(PROJECT_DIR, original_df_name, modified_data_file_name)
-issues_dataset = load_dataset("json", data_files=data_files, split="train") # , split="train"
+issues_dataset = load_dataset("json", data_files=data_files, split="train")
 print(issues_dataset)
 
 sample = issues_dataset.shuffle(seed=666).select(range(3))
