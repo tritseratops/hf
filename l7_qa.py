@@ -182,3 +182,43 @@ train_dataset = raw_dataset["train"].map(
 )
 
 print(len(raw_dataset["train"]), len(train_dataset))
+
+# Processing validation data
+
+# set offsets corresponding to the question to none
+def preprocess_validation_example(examples):
+    questions = [q.strip() for q in examples["question"]]
+    inputs = tokenizer(
+        questions,
+        examples["context"],
+        max_length=max_length,
+        truncation="only_second",
+        stride=stride,
+        return_overflowing_tokens=True,
+        return_offsets_mapping=True,
+        padding="max_length",
+    )
+
+    sample_map = inputs.pop("overflow_to_sample_mapping")
+    example_ids = []
+
+    for i in range(len(inputs["input_ids"])):
+        sample_idx = sample_map[i]
+        example_ids.append(examples["id"][sample_idx])
+
+        sequence_ids = inputs.sequence_ids(i)
+        offset = inputs["offset_mapping"][i]
+        inputs["offset_mapping"][i] = [
+            o if sequence_ids[k] == 1 else None for k, o in enumerate(offset)
+         ]
+
+    inputs["example_id"] = example_ids
+    return inputs
+
+validation_dataset = raw_dataset["validation"].map(
+    preprocess_validation_example,
+    batched=True,
+    remove_columns=raw_dataset["validation"].column_names,
+)
+
+print(len(raw_dataset["validation"]), len(validation_dataset))
