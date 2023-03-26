@@ -249,6 +249,14 @@ eval_set_for_model.set_format("numpy")
 batch = {k: eval_set_for_model[k] for k in eval_set_for_model.column_names}
 trained_model = TFAutoModelForQuestionAnswering.from_pretrained(trained_checkpoint)
 print(batch)
+# switching to CPU, because GPU has not enough memory
+print("Num GPUs Available: ", len(tf.config.list_physical_devices('GPU')))
+# decreasing memory fragmentation
+# os.environ['TF_GPU_ALLOCATOR'] = 'cuda_malloc_async'
+# config = tf.ConfigProto(
+#         device_count = {'GPU': 1}
+#     )
+# sess = tf.Session(config=config)
 outputs = trained_model(**batch)
 
 start_logits = outputs.start_logits.numpy()
