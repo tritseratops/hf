@@ -222,3 +222,43 @@ validation_dataset = raw_dataset["validation"].map(
 )
 
 print(len(raw_dataset["validation"]), len(validation_dataset))
+
+# FINE TUNING MODEL WITH KERAS
+
+# post processing
+small_eval_set = raw_dataset["validation"].select(range(100))
+trained_checkpoint = "distilbert-base-cased-distilled-squad"
+
+tokenizer = AutoTokenizer.from_pretrained(trained_checkpoint)
+eval_set = small_eval_set.map(
+    preprocess_validation_example,
+    batched=True,
+    remove_columns=raw_dataset["validation"].column_names,
+)
+
+tokenizer = AutoTokenizer.from_pretrained(model_checkpoint)
+
+# build a batch of a samll validation set and pass it through a model
+
+import tensorflow as tf
+# tf.config.experimental.set_memory_growth(gpu, True)
+from transformers import TFAutoModelForQuestionAnswering
+eval_set_for_model = eval_set.remove_columns(["example_id", "offset_mapping"])
+eval_set_for_model.set_format("numpy")
+
+batch = {k: eval_set_for_model[k] for k in eval_set_for_model.column_names}
+trained_model = TFAutoModelForQuestionAnswering.from_pretrained(trained_checkpoint)
+print(batch)
+outputs = trained_model(**batch)
+
+start_logits = outputs.start_logits.numpy()
+end_logits = outputs.end_logits.numpy()
+
+# map each example in small_eval_set to the corresponding features in eval_set
+import collections
+
+example_to_features = collections.defaultdict(list)
+for idx, feature in enumerate(eval_set):
+    example_to_features[feature["example_id"]].append(idx)
+
+# selecting best answers
