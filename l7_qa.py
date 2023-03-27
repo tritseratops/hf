@@ -226,7 +226,7 @@ print(len(raw_dataset["validation"]), len(validation_dataset))
 # FINE TUNING MODEL WITH KERAS
 
 # post processing
-small_eval_set = raw_dataset["validation"].select(range(100))
+small_eval_set = raw_dataset["validation"].select(range(25)) # course number 100
 trained_checkpoint = "distilbert-base-cased-distilled-squad"
 
 tokenizer = AutoTokenizer.from_pretrained(trained_checkpoint)
@@ -254,7 +254,7 @@ print("Num GPUs Available: ", len(tf.config.list_physical_devices('GPU')))
 # decreasing memory fragmentation
 # os.environ['TF_GPU_ALLOCATOR'] = 'cuda_malloc_async'
 # config = tf.ConfigProto(
-#         device_count = {'GPU': 1}
+#         device_count = {'GPU': 0}
 #     )
 # sess = tf.Session(config=config)
 outputs = trained_model(**batch)
@@ -270,3 +270,55 @@ for idx, feature in enumerate(eval_set):
     example_to_features[feature["example_id"]].append(idx)
 
 # selecting best answers
+import numpy as np
+
+n_best = 20
+max_answer_length = 30
+predicted_answers = []
+
+for example in small_eval_set:
+    example_id = example["id"]
+    context = example["context"]
+    answers = []
+
+    for feature_index in example_to_features[example_id]:
+        start_logit  = start_logits[feature_index]
+        end_logit = end_logits[feature_index]
+        offsets = eval_set["offset_mapping"][feature_index]
+
+        start_indexes = np.argsort(start_logit)[-1 : -n_best - 1 : -1].tolist()
+        end_indexes = np.argsort(end_logit)[-1 : -n_best - 1 : -1].tolist()
+        for start_index in start_indexes:
+            for end_index in end_indexes:
+                # Skip answers that are not fully in the context
+                if offsets[start_index] is None or offsets[end_index] is None:
+                    continue
+                # Skip answers that are < 0 or > max_answer_length
+                if(
+                    end_index - start_index < 0
+                    or end_index - start_index > max_answer_length
+                ):
+                    continue
+                answers.append(
+                    {
+                        "text" : context[offsets[start_index][0] : offsets[end_index][1]],
+                        "logit_score" : start_logit[start_index] + end_logit[end_index],
+                    }
+                )
+
+        best_answer = max(answers, key=lambda x: x["logit_score"])
+        predicted_answers.append({"id": example_id, "prediction_text": best_answer["text"]})
+
+import evaluate
+metric = evaluate.load("squad")
+
+theoretical_answers = [
+    {"id": ex["id"], "answers": ex["answers"]} for ex in small_eval_set
+]
+
+# check if results are correct
+print(predicted_answers[0])
+print(theoretical_answers[0])
+
+print(metric.compute(predictions=predicted_answers, references=theoretical_answers))
+
