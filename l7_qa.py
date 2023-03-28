@@ -322,3 +322,113 @@ print(theoretical_answers[0])
 
 print(metric.compute(predictions=predicted_answers, references=theoretical_answers))
 
+# put all into compute_metrics() function
+from tqdm.auto import tqdm
+
+def compute_metrics(start_logits, end_logits, features, examples):
+    example_to_features = collections.defaultdict(list)
+    for idx, feature in enumerate(features):
+        example_to_features[feature["example_id"]].append(idx)
+    predicted_answers = []
+    for example in tqdm(examples):
+        example_id  =example["id"]
+        context = example["context"]
+        answers = []
+
+        # Loop through all features associated with that example
+        for featured_index in example_to_features[example_id]:
+            start_logit = start_logits[featured_index]
+            end_logit = end_logits[featured_index]
+            offsets = features[featured_index]["offset_mapping"]
+
+            start_indexes = np.argsort(start_logit)[-1 : -n_best - 1 : -1].tolist()
+            end_indexes = np.argsort(end_logit)[-1 : -n_best - 1 : -1].tolist()
+            for start_index in start_indexes:
+                for end_index in end_indexes:
+                    # Skip answers that are not fully in context
+                    if offsets[start_index] is None or offsets[end_index] is None:
+                        continue
+                    # Skip answers with a length <0 or with the length > max answer length
+                    if (
+                        end_index < start_index
+                        or end_index - start_index +1 > max_answer_length
+                    ):
+                        continue
+
+                    answer = {
+                        "text" : context[offsets[start_index][0]  : offsets[end_index][1]],
+                        "logit_score" : start_logit[start_index] + end_logit[end_index],
+                    }
+                    answers.append(answer)
+
+        # Select answer with the best score
+        if len(answers) > 0:
+            best_answer = max(answers, key=lambda x: x["logit_score"])
+            predicted_answers.append(
+                {"id": example_id, "prediction_text": best_answer["text"]}
+            )
+        else:
+            predicted_answers.append({"id": example_id, "prediction_text": ""})
+
+    theoretical_answers = [{"id": ex["id"], "answers": ex["answers"]} for ex in examples]
+    return metric.compute(predictions=predicted_answers, references=theoretical_answers)
+
+print(compute_metrics(start_logits, end_logits, eval_set, small_eval_set))
+
+# Fine tuning a model
+model = TFAutoModelForQuestionAnswering.from_pretrained(model_checkpoint)
+
+from transformers import DefaultDataCollator
+
+data_collator = DefaultDataCollator(return_tensors="tf")
+
+tf_train_dataset = model.prepare_tf_dataset(
+    train_dataset,
+    collate_fn=data_collator,
+    shuffle=True,
+    batch_size=4,
+)
+tf_eval_dataset = model.prepare_tf_dataset(
+    validation_dataset,
+    collate_fn=data_collator,
+    shuffle=False,
+    batch_size=4
+)
+
+# set hyperparameters and compile model
+from transformers import create_optimizer
+from transformers.keras_callbacks import PushToHubCallback
+import tensorflow as tf
+
+# The number of training steps is a number of smaples in the dataset,
+# divided by batch size than multiplied by the total number of epochs
+# Note that tf_train_dataset is batched tf.data.Dataset,
+# not the original Hugging Face Dataset, so its len() is already num_samples // batch_size
+num_train_epochs = 1 # 3
+num_train_steps = len(tf_train_dataset) * num_train_epochs
+optimizer, schedule = create_optimizer(
+    init_lr=2e-5,
+    num_warmup_steps=0,
+    num_train_steps=num_train_steps,
+    weight_decay_rate=0.01,
+)
+model.compile(optimizer=optimizer)
+
+# Train in mixed-precision float16
+tf.keras.mixed_precision.set_global_policy("mixed_float16")
+
+from transformers.keras_callbacks import PushToHubCallback
+
+callback = PushToHubCallback(output_dir="bert-finetuned-squad", tokenizer=tokenizer)
+
+# we are going to do validation afterwards, so no validation mid-training
+model.fit(tf_train_dataset, callbacks=[callback], epochs=num_train_epochs)
+
+# evaluate our model
+predictions = model.predict(tf_eval_dataset)
+metrics = compute_metrics(
+    predictions["start_logits"],
+    predictions["end_logits"],
+    validation_dataset,
+    raw_dataset["validation"],
+)
