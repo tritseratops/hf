@@ -228,19 +228,21 @@ print(len(raw_dataset["validation"]), len(validation_dataset))
 # post processing
 small_eval_set = raw_dataset["validation"].select(range(25)) # course number 100
 trained_checkpoint = "distilbert-base-cased-distilled-squad"
-
-tokenizer = AutoTokenizer.from_pretrained(trained_checkpoint)
+import tensorflow as tf
+with tf.device('/CPU:0'):
+    tokenizer = AutoTokenizer.from_pretrained(trained_checkpoint)
 eval_set = small_eval_set.map(
     preprocess_validation_example,
     batched=True,
     remove_columns=raw_dataset["validation"].column_names,
 )
 
-tokenizer = AutoTokenizer.from_pretrained(model_checkpoint)
+with tf.device('/CPU:0'):
+    tokenizer = AutoTokenizer.from_pretrained(model_checkpoint)
 
 # build a batch of a samll validation set and pass it through a model
 
-import tensorflow as tf
+
 # tf.config.experimental.set_memory_growth(gpu, True)
 from transformers import TFAutoModelForQuestionAnswering
 eval_set_for_model = eval_set.remove_columns(["example_id", "offset_mapping"])
@@ -249,15 +251,27 @@ eval_set_for_model.set_format("numpy")
 batch = {k: eval_set_for_model[k] for k in eval_set_for_model.column_names}
 trained_model = TFAutoModelForQuestionAnswering.from_pretrained(trained_checkpoint)
 print(batch)
-# switching to CPU, because GPU has not enough memory
-print("Num GPUs Available: ", len(tf.config.list_physical_devices('GPU')))
+
+print("Num GPUs Available: ", len(tf.config.list_physical_devices()))
 # decreasing memory fragmentation
+# switching to CPU, because GPU has not enough memory
 # os.environ['TF_GPU_ALLOCATOR'] = 'cuda_malloc_async'
+# config = tf.config
 # config = tf.ConfigProto(
 #         device_count = {'GPU': 0}
 #     )
 # sess = tf.Session(config=config)
-outputs = trained_model(**batch)
+import os
+cuda_devices_num = os.environ.get("CUDA_VISIBLE_DEVICES")
+print("Devices:", cuda_devices_num)
+os.environ["CUDA_VISIBLE_DEVICES"]=""
+# import tensorflow as tf
+# with tf.device('/CPU:0'):
+
+with tf.device('/CPU:0'):
+    outputs = trained_model(**batch)
+# del os.environ["CUDA_VISIBLE_DEVICES"]
+# import tensorflow as tf
 
 start_logits = outputs.start_logits.numpy()
 end_logits = outputs.end_logits.numpy()
@@ -386,19 +400,19 @@ tf_train_dataset = model.prepare_tf_dataset(
     train_dataset,
     collate_fn=data_collator,
     shuffle=True,
-    batch_size=4,
+    batch_size=16,
 )
 tf_eval_dataset = model.prepare_tf_dataset(
     validation_dataset,
     collate_fn=data_collator,
     shuffle=False,
-    batch_size=4
+    batch_size=16
+
 )
 
 # set hyperparameters and compile model
 from transformers import create_optimizer
 from transformers.keras_callbacks import PushToHubCallback
-import tensorflow as tf
 
 # The number of training steps is a number of smaples in the dataset,
 # divided by batch size than multiplied by the total number of epochs
@@ -412,7 +426,8 @@ optimizer, schedule = create_optimizer(
     num_train_steps=num_train_steps,
     weight_decay_rate=0.01,
 )
-model.compile(optimizer=optimizer)
+with tf.device('/CPU:0'):
+    model.compile(optimizer=optimizer)
 
 # Train in mixed-precision float16
 tf.keras.mixed_precision.set_global_policy("mixed_float16")
@@ -421,9 +436,29 @@ from transformers.keras_callbacks import PushToHubCallback
 
 callback = PushToHubCallback(output_dir="bert-finetuned-squad", tokenizer=tokenizer)
 
-# we are going to do validation afterwards, so no validation mid-training
-model.fit(tf_train_dataset, callbacks=[callback], epochs=num_train_epochs)
+# decreasing memory fragmentation
+os.environ['TF_GPU_ALLOCATOR'] = 'cuda_malloc_async'
+# switching to CPU, because GPU has not enough memory
+# model = model.to('cpu')
+# import os
+# cuda_devices_num = os.environ.get("CUDA_VISIBLE_DEVICES")
+# print("Devices:", cuda_devices_num)
+# os.environ["CUDA_VISIBLE_DEVICES"]=""
+# import tensorflow as tf
+# outputs = trained_model(**batch)
+# del os.environ["CUDA_VISIBLE_DEVICES"]
 
+# import tensorflow as tf
+# config = tf.compat.v1.ConfigProto(
+#         device_count = {'GPU': 0}
+#     )
+# sess = tf.Session(config=config)
+
+# we are going to do validation afterwards, so no validation mid-training
+with tf.device('/CPU:0'):
+    model.fit(tf_train_dataset, callbacks=[callback], epochs=num_train_epochs)
+
+exit()
 # evaluate our model
 predictions = model.predict(tf_eval_dataset)
 metrics = compute_metrics(
