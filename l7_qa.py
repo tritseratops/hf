@@ -1,7 +1,14 @@
-import os
+
 #  for laptop
-os.environ['HF_HOME'] = 'd:/Large data/qa data/hf_home/'
-os.environ['TRANSFORMERS_CACHE'] = 'd:/Large data/qa data/transformers/cache/'
+import configparser
+config = configparser.ConfigParser()
+config.read('./config.ini')
+HF_TOKEN = config.get('GITHUB', 'GITHUB_TOKEN')
+HF_HOME = config.get('LOCAL', 'HF_HOME')
+TRANSFORMERS_CACHE = config.get('LOCAL', 'TRANSFORMERS_CACHE')
+import os
+os.environ['HF_HOME'] = HF_HOME
+os.environ['TRANSFORMERS_CACHE'] = TRANSFORMERS_CACHE
 
 from datasets import load_dataset
 raw_dataset = load_dataset("squad")
@@ -434,7 +441,7 @@ tf.keras.mixed_precision.set_global_policy("mixed_float16")
 
 from transformers.keras_callbacks import PushToHubCallback
 
-callback = PushToHubCallback(output_dir="bert-finetuned-squad", tokenizer=tokenizer)
+callback = PushToHubCallback(output_dir="bert-finetuned-squad", tokenizer=tokenizer, use_auth_token=True)
 
 # decreasing memory fragmentation
 os.environ['TF_GPU_ALLOCATOR'] = 'cuda_malloc_async'
