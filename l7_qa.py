@@ -236,18 +236,18 @@ print(len(raw_dataset["validation"]), len(validation_dataset))
 small_eval_set = raw_dataset["validation"].select(range(25)) # course number 100
 trained_checkpoint = "distilbert-base-cased-distilled-squad"
 import tensorflow as tf
-with tf.device('/CPU:0'):
-    tokenizer = AutoTokenizer.from_pretrained(trained_checkpoint)
+# with tf.device('/CPU:0'):
+tokenizer = AutoTokenizer.from_pretrained(trained_checkpoint)
 eval_set = small_eval_set.map(
     preprocess_validation_example,
     batched=True,
     remove_columns=raw_dataset["validation"].column_names,
 )
 
-with tf.device('/CPU:0'):
-    tokenizer = AutoTokenizer.from_pretrained(model_checkpoint)
+# with tf.device('/CPU:0'):
+tokenizer = AutoTokenizer.from_pretrained(model_checkpoint)
 
-# build a batch of a samll validation set and pass it through a model
+# build a batch of a small validation set and pass it through a model
 
 
 # tf.config.experimental.set_memory_growth(gpu, True)
@@ -275,8 +275,8 @@ os.environ["CUDA_VISIBLE_DEVICES"]=""
 # import tensorflow as tf
 # with tf.device('/CPU:0'):
 
-with tf.device('/CPU:0'):
-    outputs = trained_model(**batch)
+# with tf.device('/CPU:0'):
+outputs = trained_model(**batch)
 # del os.environ["CUDA_VISIBLE_DEVICES"]
 # import tensorflow as tf
 
@@ -433,15 +433,20 @@ optimizer, schedule = create_optimizer(
     num_train_steps=num_train_steps,
     weight_decay_rate=0.01,
 )
-with tf.device('/CPU:0'):
-    model.compile(optimizer=optimizer)
+# with tf.device('/CPU:0'):
+model.compile(optimizer=optimizer)
 
 # Train in mixed-precision float16
 tf.keras.mixed_precision.set_global_policy("mixed_float16")
 
+# import huggingface_hub
+
+# Set the authentication token
+# huggingface_hub.set_hf_token(HF_TOKEN)
+
 from transformers.keras_callbacks import PushToHubCallback
 
-callback = PushToHubCallback(output_dir="bert-finetuned-squad", tokenizer=tokenizer, use_auth_token=True)
+callback = PushToHubCallback(output_dir="bert-finetuned-squad", tokenizer=tokenizer, hub_token=HF_TOKEN) # , use_auth_token=True
 
 # decreasing memory fragmentation
 os.environ['TF_GPU_ALLOCATOR'] = 'cuda_malloc_async'
@@ -462,10 +467,10 @@ os.environ['TF_GPU_ALLOCATOR'] = 'cuda_malloc_async'
 # sess = tf.Session(config=config)
 
 # we are going to do validation afterwards, so no validation mid-training
-with tf.device('/CPU:0'):
-    model.fit(tf_train_dataset, callbacks=[callback], epochs=num_train_epochs)
+# with tf.device('/CPU:0'):
+model.fit(tf_train_dataset, callbacks=[callback], epochs=num_train_epochs)
 
-exit()
+
 # evaluate our model
 predictions = model.predict(tf_eval_dataset)
 metrics = compute_metrics(
