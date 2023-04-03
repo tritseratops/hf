@@ -277,6 +277,7 @@ os.environ["CUDA_VISIBLE_DEVICES"]=""
 
 # with tf.device('/CPU:0'):
 outputs = trained_model(**batch)
+# outputs = trained_model.cpu()(**batch) # need to check if it switched to cpu
 # del os.environ["CUDA_VISIBLE_DEVICES"]
 # import tensorflow as tf
 
@@ -469,6 +470,7 @@ os.environ['TF_GPU_ALLOCATOR'] = 'cuda_malloc_async'
 # we are going to do validation afterwards, so no validation mid-training
 # with tf.device('/CPU:0'):
 model.fit(tf_train_dataset, callbacks=[callback], epochs=num_train_epochs)
+# model.cpu().fit(tf_train_dataset, callbacks=[callback], epochs=num_train_epochs) # need to check if this will use CPU
 
 
 # evaluate our model
